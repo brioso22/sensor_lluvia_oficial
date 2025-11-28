@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard - Panel de Sensores</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- BOOTSTRAP -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- CHART JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        #estadoCirculo {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            margin: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: bold;
+            color: white;
+            transition: 0.3s;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        #alertaInundacion {
+            display: none;
+            font-size: 22px;
+            font-weight: bold;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .navbar {
+            background: linear-gradient(90deg, #007bff, #0056b3);
+        }
+
+        .alert-info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .alert-secondary { background-color: #e2e3e5; border-color: #d6d8db; }
+        .alert-warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .alert-dark { background-color: #d6d8db; border-color: #c6c8ca; color: #495057; }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+            width: 100%;
+        }
+
+        .qr-container img {
+            max-width: 180px;
+            height: auto;
+            display: block;
+            margin: auto;
+        }
+
+        .registrarse-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .registrarse-link a {
+            font-weight: bold;
+            text-decoration: none;
+            color: #007bff;
+        }
+
+        .registrarse-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<!-- ALERTA SUPERIOR -->
+<div id="alertaInundacion" class="alert alert-danger text-center rounded-0 m-0 py-3">
+    🚨 ALERTA DE INUNDACIÓN — Nivel del agua supera los 30 cm y está lloviendo 🚨
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="#">Panel de Sensores</a>
+        <button class="btn btn-danger ms-auto" onclick="logout()">Cerrar sesión</button>
+    </div>
+</nav>
+
+<!-- DASHBOARD -->
+<div class="container py-4" id="dashboard">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+
+            <!-- INDICADOR PRINCIPAL Y GRÁFICA DE HUMEDAD + QR -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="card shadow-lg border-0 rounded-4 h-100">
+                                <div class="card-body py-4 text-center">
+                                    <h3 class="fw-bold mb-4">Estado Actual</h3>
+                                    <div id="estadoCirculo" class="shadow-lg bg-secondary">--</div>
+                                    <p class="mt-3 mb-0 text-secondary">
+                                        Basado en lluvia + nivel de agua
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6 qr-container">
+                            <div class="card shadow-lg border-0 rounded-4 h-100 d-flex align-items-center justify-content-center">
+                                <img src="qr.png" alt="Código QR">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card shadow-lg border-0 rounded-4 h-100">
+                        <div class="card-header bg-info text-white fw-bold text-center">
+                            Gráfico de Humedad
+                        </div>
+                        <div class="card-body d-flex align-items-center justify-content-center">
+                            <div class="chart-container">
+                                <canvas id="grafHumedad"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DATOS -->
+            <div class="card shadow-lg border-0 rounded-4 mb-4">
+                <div class="card-header bg-primary text-white fw-bold text-center">
+                    Última lectura del sensor
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="alert alert-info shadow-sm rounded-3 d-flex justify-content-between">
+                                <strong>Humedad</strong>
+                                <span id="humedad" class="fw-bold fs-4">--</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="alert alert-secondary shadow-sm rounded-3 d-flex justify-content-between">
+                                <strong>Nivel Agua</strong>
+                                <span id="nivel" class="fw-bold fs-4">--</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="alert alert-warning shadow-sm rounded-3 d-flex justify-content-between">
+                                <strong>Lluvia</strong>
+                                <span id="lluvia" class="fw-bold fs-4">--</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="alert alert-dark shadow-sm rounded-3 d-flex justify-content-between">
+                                <strong>Fecha</strong>
+                                <span id="fecha" class="fw-bold fs-6">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GRÁFICA NIVEL (LÍNEA) -->
+            <div class="card shadow-lg border-0 rounded-4 mb-5">
+                <div class="card-header bg-dark text-white fw-bold text-center">
+                    Gráfico de Nivel de Agua
+                </div>
+                <div class="card-body">
+                    <canvas id="grafNivel" height="120"></canvas>
+                </div>
+            </div>
+
+            <!-- ENLACE REGISTRARSE -->
+            <div class="registrarse-link">
+                <a href="#">Registrarse</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+let chartHumedad, chartNivel;
+let nivelData = [];
+
+function actualizarGraficos(hum, nivel) {
+    if (!chartHumedad) {
+        chartHumedad = new Chart(document.getElementById("grafHumedad"), {
+            type: "doughnut",
+            data: {
+                labels: ["Humedad (%)", "Falta (%)"],
+                datasets: [{
+                    data: [hum, 100 - hum],
+                    backgroundColor: ["#007bff", "#e9ecef"],
+                    borderWidth: 2,
+                    borderColor: "#ffffff"
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: "60%",
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 14 } } },
+                    tooltip: { callbacks: { label: ctx => ctx.label + ': ' + ctx.parsed + '%' } }
+                }
+            }
+        });
+    } else {
+        chartHumedad.data.datasets[0].data = [hum, 100 - hum];
+        chartHumedad.update();
+    }
+
+    nivelData.push(nivel);
+    if (nivelData.length > 15) nivelData.shift();
+
+    if (!chartNivel) {
+        chartNivel = new Chart(document.getElementById("grafNivel"), {
+            type: "line",
+            data: {
+                labels: nivelData.map((_, i) => i + 1),
+                datasets: [{
+                    label: "Nivel Agua (cm)",
+                    data: nivelData,
+                    borderColor: "#28a745",
+                    backgroundColor: "rgba(40, 167, 69, 0.1)",
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: "#28a745",
+                    pointBorderColor: "#ffffff",
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: true, position: 'top' } },
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Nivel (cm)' } },
+                    x: { title: { display: true, text: 'Lecturas Recientes' } }
+                }
+            }
+        });
+    } else {
+        chartNivel.data.labels = nivelData.map((_, i) => i + 1);
+        chartNivel.data.datasets[0].data = nivelData;
+        chartNivel.update();
+    }
+}
+
+async function getData() {
+    try {
+        const resp = await fetch("http://localhost:8000/sensores");
+        if (!resp.ok) return;
+        const data = await resp.json();
+
+        const hum = parseFloat(data.humedad);
+        const nivel = parseFloat(data.nivel_agua);
+        const lluvia = data.lloviendo;
+        const fecha = new Date(data.timestamp * 1000).toLocaleTimeString();
+
+        document.getElementById("humedad").innerText = hum;
+        document.getElementById("nivel").innerText = nivel;
+        document.getElementById("lluvia").innerText = lluvia ? "Sí" : "No";
+        document.getElementById("fecha").innerText = fecha;
+
+        actualizarGraficos(hum, nivel);
+
+        const circulo = document.getElementById("estadoCirculo");
+        const alerta = document.getElementById("alertaInundacion");
+
+        if (lluvia && nivel > 30) {
+            circulo.style.background = "linear-gradient(45deg, #dc3545, #c82333)";
+            circulo.innerText = "ALERTA";
+            alerta.style.display = "block";
+        } else {
+            circulo.style.background = "linear-gradient(45deg, #28a745, #20c997)";
+            circulo.innerText = "OK";
+            alerta.style.display = "none";
+        }
+
+    } catch (err) {
+        console.log("Error fetch sensores:", err);
+    }
+}
+
+getData();
+setInterval(getData, 4000);
+
+function logout() {
+    alert("Sesión cerrada (simulado)");
+}
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
