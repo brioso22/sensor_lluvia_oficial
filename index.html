@@ -274,7 +274,7 @@ function actualizarGraficos(hum, nivel) {
 
 async function getData() {
     try {
-        const resp = await fetch("http://localhost:8000/sensores");
+        const resp = await fetch("https://470d79e155d7.ngrok-free.app/sensores");
         if (!resp.ok) return;
         const data = await resp.json();
 
